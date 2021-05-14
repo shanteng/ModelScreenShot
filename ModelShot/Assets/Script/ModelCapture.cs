@@ -8,23 +8,15 @@ using System.Collections.Generic;
 public class ModelCapture : MonoBehaviour
 {
     public Camera _camera;
-    public Transform _modelRoot;
     public static ModelCapture mInstance;
     void Awake()
     {
         mInstance = this;
     }
 
-    public int offset = 500;
-    public int pngWidth = 800;
     public void CaptureCamera(string SaveName,Image img)
     {
         Camera camera = _camera;
-
-        Vector3 ScreenPos = camera.WorldToScreenPoint(this._modelRoot.localPosition);
-        //var x = ScreenPos.x - Screen.width / 2;
-        //       var y = ScreenPos.y - Screen.height / 2;
-
         int w = 1920; //Screen.width;
         int h = 1080;// Screen.height;
 
@@ -34,8 +26,8 @@ public class ModelCapture : MonoBehaviour
    
         camera.RenderDontRestore();
         RenderTexture.active = renderTexture;
-        Texture2D shot = new Texture2D(pngWidth, h, TextureFormat.ARGB32, false);
-        shot.ReadPixels(new Rect(offset, 0, pngWidth, h), 0, 0);
+        Texture2D shot = new Texture2D(w, h, TextureFormat.ARGB32, false);
+        shot.ReadPixels(new Rect(0, 0, w, h), 0, 0);
         shot.Apply();
 
         Sprite _sprite = Sprite.Create(shot, new Rect(0, 0, shot.width, shot.height), new Vector2(0.5f, 0.5f));

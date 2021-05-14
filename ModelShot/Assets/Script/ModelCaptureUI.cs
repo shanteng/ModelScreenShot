@@ -11,6 +11,7 @@ using System;
 
 public class ModelCaptureUI : MonoBehaviour
 {
+    private Camera mModelCamera;
     public UIDragHandler _drager;
     public Transform _modelRoot;
 
@@ -33,9 +34,18 @@ public class ModelCaptureUI : MonoBehaviour
     public Slider _timeScleSlider;
     public Button _btnFrame;
 
+
+    public List<Toggle> mCameraToggleList;
+    public Slider _CameraView;
+    public Vector2 mOrthoSizeRange = new Vector2(5, 15);
+    public Vector2 mFieldOfViewRange = new Vector2(50, 90);
+
     public Image _PreViewImg;
+
+    public string mModelPath = "Assets/Res/Models";
     void Awake()
     {
+        mModelCamera = Camera.main;
         this._PreViewImg.gameObject.SetActive(false);
         this._templete.gameObject.SetActive(false);
         this._drager._beginCall = this.OnBeginDrag;
@@ -50,20 +60,37 @@ public class ModelCaptureUI : MonoBehaviour
         this._btnResetState.onClick.AddListener(OnClickResetState);
         this._btnFrame.onClick.AddListener(OnClickFrame);
 
-        _timeScleSlider.onValueChanged.AddListener(this.OnSlider);
+        this._CameraView.wholeNumbers = true;
 
-        foreach (Toggle to in this.mToggleList)
-        {
-            to.GetComponentInChildren<Text>().text = to.name;
-            to.isOn = false;
-        }
+        _timeScleSlider.onValueChanged.AddListener(this.OnSlider);
+        _CameraView.onValueChanged.AddListener(this.OnCameraSlider);
 
         foreach (Toggle to in this.mToggleList)
         {
             to.onValueChanged.AddListener(this.OnToggle);
         }
 
+        foreach (Toggle to in this.mCameraToggleList)
+        {
+            to.onValueChanged.AddListener(this.OnCameraToggle);
+        }
+
+        OnCameraToggle(true);
         this.InitModelFileList();
+    }
+
+    void OnCameraSlider(float value)
+    {
+        if (this.mModelCamera.orthographic)
+        {
+            this.mModelCamera.orthographicSize = value;
+            _CameraView.GetComponentInChildren<Text>().text = "Size:" + value;
+        }
+        else
+        {
+            this.mModelCamera.fieldOfView = value;
+            _CameraView.GetComponentInChildren<Text>().text = "FieldOfView:" + value;
+        }
     }
 
     void OnSlider(float value)
@@ -72,6 +99,32 @@ public class ModelCaptureUI : MonoBehaviour
         Time.timeScale = val;
         float speed = Mathf.RoundToInt(val * 100);
         _timeScleSlider.GetComponentInChildren<Text>().text = "播放速度:"+ speed;
+    }
+
+    void OnCameraToggle(bool toggle)
+    {
+        foreach (Toggle to in this.mCameraToggleList)
+        {
+            if (to.isOn)
+            {
+                if (to.name.Equals("Orthographic"))
+                {
+                    mModelCamera.orthographic = true;
+                    this._CameraView.minValue = this.mOrthoSizeRange.x;
+                    this._CameraView.maxValue = this.mOrthoSizeRange.y;
+                    this._CameraView.value = this.mOrthoSizeRange.x;
+                    mModelCamera.orthographicSize = this.mOrthoSizeRange.x;
+                }
+                else
+                {
+                    mModelCamera.orthographic = false;
+                    this._CameraView.minValue = this.mFieldOfViewRange.x;
+                    this._CameraView.maxValue = this.mFieldOfViewRange.y;
+                    this._CameraView.value = this.mFieldOfViewRange.x;
+                    mModelCamera.fieldOfView = this.mFieldOfViewRange.x;
+                }
+            }
+        }
     }
 
     private string _stateName = "";
@@ -137,6 +190,7 @@ public class ModelCaptureUI : MonoBehaviour
         {
             to.isOn = false;
         }
+        mToggleList[0].isOn = true;
         _stateName = "";
         this._mode.transform.localEulerAngles = Vector3.zero;
         Time.timeScale = 1f;
@@ -157,13 +211,13 @@ public class ModelCaptureUI : MonoBehaviour
     private List<string> _prefabs_names;
     private List<string> _show_names;
     private string _keyName = "";
+   
     private void InitModelFileList()
     {
-        string fullPath = "Assets/BundleAssets/Characters";
         _prefabs_names = new List<string>();
         this._show_names = new List<string>();
 
-        string[] subFolders = Directory.GetDirectories(fullPath);
+        string[] subFolders = Directory.GetDirectories(mModelPath);
         string[] guids = null;
         int i = 0, iMax = 0;
         foreach (var folder in subFolders)
@@ -171,11 +225,8 @@ public class ModelCaptureUI : MonoBehaviour
             guids = AssetDatabase.FindAssets("t:Prefab", new string[] { folder });
             for (i = 0, iMax = guids.Length; i < iMax; ++i)
             {
-                string nameStr = AssetDatabase.GUIDToAssetPath(guids[i]);
-                int lastIndex = nameStr.LastIndexOf('/');
-                string lastStr = nameStr.Substring(lastIndex + 1, nameStr.Length - lastIndex - 1);
-                if (lastStr.StartsWith("H_"))
-                    _prefabs_names.Add(nameStr);
+                string guidPath = AssetDatabase.GUIDToAssetPath(guids[i]);
+                _prefabs_names.Add(guidPath);
             }
         }
         ShowList();
@@ -231,7 +282,7 @@ public class ModelCaptureUI : MonoBehaviour
         {
             this._mode = GameObject.Instantiate(go,this._modelRoot) as GameObject;
             this._mode.transform.localPosition = Vector3.zero;
-            this._mode.transform.localScale = Vector3.one;
+            this._mode.transform.localScale = Vector3.one*6;//模型比较小，为方便调试放大了6倍
             this._mode.transform.localEulerAngles = Vector3.zero;
         }
 
